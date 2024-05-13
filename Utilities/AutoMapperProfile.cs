@@ -28,6 +28,16 @@ namespace Adres.Utilities
             from => from.Ignore())
             .ForMember(to => to.Fecha,
             from => from.MapFrom(origin => DateTime.ParseExact(origin.Fecha, "dd/MM/yyyy", CultureInfo.InvariantCulture)));
+
+            CreateMap<Parametrica, ParametricaDTO>().ReverseMap();
+
+             CreateMap<Historico, HistoricoDTO>()
+            .ForMember(to => to.FechaModificacion,
+            from => from.MapFrom(origin => origin.FechaModificacion.ToString("dd/MM/yyyy")));
+
+            CreateMap<HistoricoDTO, Historico>()
+            .ForMember(to => to.FechaModificacion,
+            from => from.MapFrom(origin => DateTime.ParseExact(origin.FechaModificacion, "dd/MM/yyyy", CultureInfo.InvariantCulture)));
         }
 
     }

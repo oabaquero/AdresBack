@@ -10,11 +10,11 @@ namespace Adres.Services.Implementations
         public ParametricaService(AdresContext dbContext){
             _dbContext = dbContext;
         }
-        public async Task<List<Parametrica>> GetList()
+        public async Task<List<Parametrica>> GetList(string tipo)
         {
             try
             {
-                return await _dbContext.Parametricas.ToListAsync();
+                return await _dbContext.Parametricas.Where(x=>x.Tipo == tipo).ToListAsync();
             }
             catch(Exception ex)
             {

@@ -10,6 +10,7 @@ namespace Adres.Models
 
         public DbSet<Adquisicion> Adquisiciones {get; set;}
         public DbSet<Parametrica> Parametricas {get; set;}
+         public DbSet<Historico> Historicos {get; set;}
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

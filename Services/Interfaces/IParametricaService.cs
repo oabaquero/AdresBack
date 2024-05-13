@@ -4,6 +4,6 @@ namespace Adres.Services.Interfaces
 {
     public interface IParametricaService
     {
-        Task<List<Parametrica>> GetList();
+        Task<List<Parametrica>> GetList(string tipo);
     }
 }

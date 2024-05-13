@@ -3,6 +3,7 @@ using Adres.Services.Interfaces;
 using AutoMapper;
 using Adres.DTOs;
 using Adres.Models;
+using Newtonsoft.Json;
 
 namespace Adres.Controllers
 {
@@ -11,14 +12,12 @@ namespace Adres.Controllers
     public class AdquisicionController : ControllerBase
     {
         private readonly IAdquisicionService _adquisicionService;
-        private readonly IParametricaService _parametricaService;
         private readonly IMapper _mapper;
 
-        public AdquisicionController(IAdquisicionService adquisicionService, IMapper mapper, IParametricaService parametricaService)
+        public AdquisicionController(IAdquisicionService adquisicionService, IMapper mapper)
         {
             _adquisicionService = adquisicionService;
             _mapper = mapper;
-            _parametricaService = parametricaService;
         }
 
         // GET: api/Adquisicion
@@ -53,6 +52,7 @@ namespace Adres.Controllers
             var adquisicionAdd = await _adquisicionService.Add(adquisicion);
             if(adquisicionAdd.Id != 0)
             {
+                await _adquisicionService.GuardarHistorico(JsonConvert.SerializeObject(model),true,string.Empty, adquisicionAdd.Id);
                 return Ok(_mapper.Map<AdquisicionDTO>(adquisicionAdd));
             }
             else
@@ -67,8 +67,12 @@ namespace Adres.Controllers
             var resultadoAdquisicion = await _adquisicionService.Get(id);
             if(resultadoAdquisicion is null)
                 return NoContent();
-
+            var resultadoAdquisicionDTO = _mapper.Map<AdquisicionDTO>(resultadoAdquisicion);
+            resultadoAdquisicionDTO.NombreBien=string.Empty;
+            resultadoAdquisicionDTO.NombreProveedor=string.Empty;
+            resultadoAdquisicionDTO.NombreUnidad=string.Empty;
             var adquisicion = _mapper.Map<Adquisicion>(model);
+            
             resultadoAdquisicion.Presupuesto = adquisicion.Presupuesto;
             resultadoAdquisicion.UnidadId = adquisicion.UnidadId;
             resultadoAdquisicion.BienId = adquisicion.BienId;
@@ -82,7 +86,10 @@ namespace Adres.Controllers
             var resultadoUpdate = await _adquisicionService.Update(resultadoAdquisicion);
 
             if(resultadoUpdate)
+            {
+                await _adquisicionService.GuardarHistorico(JsonConvert.SerializeObject(model),false,JsonConvert.SerializeObject(resultadoAdquisicionDTO), model.Id);
                 return Ok(_mapper.Map<AdquisicionDTO>(resultadoAdquisicion));
+            }
             else
                 return StatusCode(StatusCodes.Status500InternalServerError);
             
@@ -104,16 +111,16 @@ namespace Adres.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError);
         }
 
-        [HttpGet("/parametrica")]
-        public async Task<ActionResult<IEnumerable<Parametrica>>> GetParametricas()
+        // GET: api/Adquisicion/5
+        [HttpGet("historico/{id}")]
+        public async Task<ActionResult<IEnumerable<HistoricoDTO>>> GetListHistorico(int id)
         {
-            return await _parametricaService.GetList();
-        }
-
-        [HttpGet("/adquisiciones")]
-        public async Task<ActionResult<IEnumerable<Adquisicion>>> Get()
-        {
-            return await _adquisicionService.GetList();
+            var listaHistorico = await _adquisicionService.GetListHistorico(id);
+            var listaHistoricoDTO = _mapper.Map<List<HistoricoDTO>>(listaHistorico);
+            if(listaHistoricoDTO.Count>0)
+                return Ok(listaHistoricoDTO);
+            else
+                return NoContent();
         }
     }
 }

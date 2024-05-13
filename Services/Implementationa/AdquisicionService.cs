@@ -1,5 +1,6 @@
 using Adres.Models;
 using Adres.Services.Interfaces;
+using JsonDiffPatchDotNet;
 using Microsoft.EntityFrameworkCore;
 
 namespace Adres.Services.Implementations
@@ -26,7 +27,7 @@ namespace Adres.Services.Implementations
             }
         }
 
-        public async Task<Adquisicion> Get(int IAdquisicion)
+        public async Task<Adquisicion> Get(int adquisicionId)
         {
             try
             {
@@ -34,7 +35,7 @@ namespace Adres.Services.Implementations
                 .Include(x => x.Unidades)
                 .Include(x => x.Bienes)
                 .Include(x => x.Proveedores)
-                .Where(x => x.Id == IAdquisicion).FirstOrDefaultAsync();
+                .Where(x => x.Id == adquisicionId).FirstOrDefaultAsync();
             }
             catch(Exception ex)
             {
@@ -46,7 +47,8 @@ namespace Adres.Services.Implementations
         {
             try
             {
-                _dbContext.Adquisiciones.Add(adquisicion);
+                adquisicion.Id = await _dbContext.Adquisiciones.CountAsync() + 1;
+                await _dbContext.Adquisiciones.AddAsync(adquisicion);
                 await _dbContext.SaveChangesAsync();
                 return adquisicion;
             }
@@ -82,6 +84,52 @@ namespace Adres.Services.Implementations
             {
                 throw ex;
             }
+        }
+
+        public async Task<List<Historico>> GetListHistorico(int adquisicionId)
+        {
+            try
+            {
+                return await _dbContext.Historicos
+                .Where(x=> x.AdquisicionId == adquisicionId)
+                .ToListAsync();
+            }
+            catch(Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        public async Task GuardarHistorico(string adquisicion, bool registroNuevo, string adquisicionAnterior, int adquisicionId)
+        {
+            // Obtener el próximo Id de Historico de manera segura
+            var siguienteId = await _dbContext.Historicos.CountAsync() + 1;
+
+            var historicoData = new Historico
+            {
+                Id = siguienteId,
+                AdquisicionId = adquisicionId,
+                DataActual = adquisicion,
+                FechaModificacion = DateTime.UtcNow
+            };
+
+            if (registroNuevo)
+            {
+                historicoData.DataAnterior = string.Empty;
+                historicoData.Diferencia = "Nuevo registro";
+            }
+            else
+            {
+                historicoData.DataAnterior = adquisicionAnterior;
+                
+                var jdp = new JsonDiffPatch();
+                var diferencia = jdp.Diff(historicoData.DataAnterior, historicoData.DataActual);
+                historicoData.Diferencia = diferencia ?? "No hay diferencia detectada";
+            }
+
+            // Agregar el historial a la base de datos
+            await _dbContext.Historicos.AddAsync(historicoData);
+            await _dbContext.SaveChangesAsync();
         }
     }
 }
